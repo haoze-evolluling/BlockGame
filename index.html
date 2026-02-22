@@ -94,20 +94,11 @@
             flex-direction: column;
         }
         
-        .btn-reboot {
-            background: transparent;
-            color: #ff4444;
-            border: 1.5px solid #3a3a3a;
-        }
-        
-        .btn-reboot:hover:not(:disabled) {
-            border-color: #ff4444;
-            background: rgba(255, 68, 68, 0.05);
-        }
-        
         .btn {
             padding: 16px 24px;
-            border: none;
+            background: transparent;
+            color: #fff;
+            border: 1.5px solid #3a3a3a;
             border-radius: 12px;
             font-size: 15px;
             font-weight: 500;
@@ -118,40 +109,21 @@
             justify-content: center;
             gap: 8px;
         }
-        
-        .btn:hover {
+
+        .btn:hover:not(:disabled) {
+            border-color: #fff;
+            background: rgba(255, 255, 255, 0.05);
             transform: translateY(-1px);
         }
-        
+
         .btn:active {
             transform: translateY(0);
         }
-        
+
         .btn:disabled {
             opacity: 0.3;
             cursor: not-allowed;
             transform: none;
-        }
-        
-        .btn-normal {
-            background: #fff;
-            color: #0a0a0a;
-        }
-        
-        .btn-normal:hover:not(:disabled) {
-            background: #e0e0e0;
-            box-shadow: 0 4px 16px rgba(255, 255, 255, 0.1);
-        }
-        
-        .btn-block {
-            background: transparent;
-            color: #fff;
-            border: 1.5px solid #3a3a3a;
-        }
-        
-        .btn-block:hover:not(:disabled) {
-            border-color: #fff;
-            background: rgba(255, 255, 255, 0.05);
         }
         
         .message {
@@ -249,6 +221,16 @@
         let remainingSeconds = 0;
         
         async function setLoss(loss) {
+            // 如果是断网操作，先启动本地倒计时，再发送请求
+            if (loss === 100) {
+                startCountdown();
+            } else {
+                stopCountdown();
+            }
+
+            // 立即更新状态显示
+            updateStatusUI(loss === 100);
+
             try {
                 const response = await fetch(`${API_URL}/api/set-loss`, {
                     method: 'POST',
@@ -257,22 +239,21 @@
                     },
                     body: JSON.stringify({ loss })
                 });
-                
+
                 const data = await response.json();
                 showMessage(data.message, data.success ? 'success' : 'error');
-                
-                if (data.success) {
-                    updateStatus();
-                    
-                    if (loss === 100) {
-                        startCountdown();
-                    } else {
-                        stopCountdown();
-                    }
-                }
             } catch (error) {
-                showMessage('连接失败：' + error.message, 'error');
+                // 断网时请求会失败，但倒计时已经在本地启动
+                if (loss === 100) {
+                    showMessage('断网已启动，30秒后自动恢复', 'success');
+                } else {
+                    showMessage('连接失败：' + error.message, 'error');
+                }
             }
+        }
+
+        function updateStatusUI(isBlocked) {
+            document.getElementById('currentStatus').textContent = isBlocked ? '已断开' : '正常';
         }
         
         async function rebootSystem() {
@@ -297,40 +278,44 @@
         
         function startCountdown() {
             stopCountdown();
-            
+
             remainingSeconds = BLOCK_DURATION;
             const countdownEl = document.getElementById('countdown');
-            const countdownValueEl = document.getElementById('countdownValue');
             const progressBar = document.getElementById('progressBar');
-            const progressFill = document.getElementById('progressFill');
             const btnBlock = document.getElementById('btnBlock');
-            
+            const btnNormal = document.getElementById('btnNormal');
+            const btnReboot = document.getElementById('btnReboot');
+
             countdownEl.classList.add('active');
             progressBar.classList.add('active');
             btnBlock.disabled = true;
-            
+            btnNormal.disabled = true;
+            btnReboot.disabled = true;
+
             updateCountdownUI();
-            
+
             countdownInterval = setInterval(() => {
                 remainingSeconds--;
                 updateCountdownUI();
-                
+
                 if (remainingSeconds <= 0) {
                     stopCountdown();
                     setLoss(0);
                 }
             }, 1000);
         }
-        
+
         function stopCountdown() {
             if (countdownInterval) {
                 clearInterval(countdownInterval);
                 countdownInterval = null;
             }
-            
+
             document.getElementById('countdown').classList.remove('active');
             document.getElementById('progressBar').classList.remove('active');
             document.getElementById('btnBlock').disabled = false;
+            document.getElementById('btnNormal').disabled = false;
+            document.getElementById('btnReboot').disabled = false;
             remainingSeconds = 0;
         }
         
