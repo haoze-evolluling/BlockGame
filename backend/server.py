@@ -1,8 +1,17 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from network_control import NetworkController
 import os
 import subprocess
+import sys
+
+# 修复打包后的模块导入
+if getattr(sys, 'frozen', False):
+    # 打包后的环境
+    import importlib.util
+    backend_path = os.path.join(sys._MEIPASS, 'backend')
+    sys.path.insert(0, backend_path)
+    
+from backend.network_control import NetworkController
 
 app = Flask(__name__)
 CORS(app)
@@ -41,6 +50,11 @@ def set_loss():
         return jsonify({'success': False, 'message': '无效的丢包率'}), 400
 
     success, message = controller.set_packet_loss(loss)
+    return jsonify({'success': success, 'message': message})
+
+@app.route('/api/reboot', methods=['POST'])
+def reboot():
+    success, message = controller.reboot_system()
     return jsonify({'success': success, 'message': message})
 
 if __name__ == '__main__':

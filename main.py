@@ -2,6 +2,7 @@ import os
 import sys
 import ctypes
 import subprocess
+import winreg
 
 
 def is_admin():
@@ -17,6 +18,25 @@ def run_as_admin():
     script_path = os.path.abspath(sys.argv[0])
     params = ' '.join(sys.argv[1:])
     ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, f'"{script_path}" {params}', None, 1)
+
+
+def add_to_startup():
+    """添加到开机自启动"""
+    try:
+        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
+        
+        script_path = os.path.abspath(sys.argv[0])
+        startup_command = f'"{sys.executable}" "{script_path}"'
+        
+        winreg.SetValueEx(key, "NetworkController", 0, winreg.REG_SZ, startup_command)
+        winreg.CloseKey(key)
+        
+        print("✓ 已设置开机自启动")
+        return True
+    except Exception as e:
+        print(f"✗ 设置开机自启动失败：{e}")
+        return False
 
 
 def main():
@@ -48,4 +68,5 @@ if __name__ == '__main__':
         run_as_admin()
         sys.exit(0)
     
+    add_to_startup()
     main()

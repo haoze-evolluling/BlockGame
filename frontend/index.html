@@ -94,6 +94,17 @@
             flex-direction: column;
         }
         
+        .btn-reboot {
+            background: transparent;
+            color: #ff4444;
+            border: 1.5px solid #3a3a3a;
+        }
+        
+        .btn-reboot:hover:not(:disabled) {
+            border-color: #ff4444;
+            background: rgba(255, 68, 68, 0.05);
+        }
+        
         .btn {
             padding: 16px 24px;
             border: none;
@@ -223,6 +234,9 @@
                 <span>临时断网</span>
                 <span style="opacity: 0.5">(30秒)</span>
             </button>
+            <button class="btn btn-reboot" id="btnReboot" onclick="rebootSystem()">
+                <span>重启系统</span>
+            </button>
         </div>
         
         <div class="message" id="message"></div>
@@ -258,6 +272,26 @@
                 }
             } catch (error) {
                 showMessage('连接失败：' + error.message, 'error');
+            }
+        }
+        
+        async function rebootSystem() {
+            if (!confirm('确定要立即重启系统吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/api/reboot`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                showMessage(data.message, data.success ? 'success' : 'error');
+            } catch (error) {
+                showMessage('重启失败：' + error.message, 'error');
             }
         }
         

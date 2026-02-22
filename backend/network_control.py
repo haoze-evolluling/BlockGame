@@ -88,6 +88,18 @@ class NetworkController:
         except:
             pass
 
+    def reboot_system(self):
+        """重启系统"""
+        try:
+            if self.system == "Windows":
+                subprocess.run("shutdown /r /t 0", shell=True)
+                return True, "系统正在重启..."
+            else:
+                subprocess.run("reboot", shell=True)
+                return True, "系统正在重启..."
+        except Exception as e:
+            return False, f"重启失败：{str(e)}"
+
     def cleanup(self):
         """清理资源"""
         if self._recovery_timer:
