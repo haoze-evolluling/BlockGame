@@ -270,7 +270,20 @@ def show_help():
     print("安装后访问: http://<本机IP>:5000")
 
 
+def enable_all_adapters():
+    """启用所有网络适配器"""
+    try:
+        cmd = 'powershell -Command "Get-NetAdapter | Where-Object {$_.Status -eq \'Disabled\'} | Enable-NetAdapter -Confirm:$false"'
+        subprocess.run(cmd, shell=True, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
+        return True
+    except Exception as e:
+        print(f"启用网络适配器失败: {e}")
+        return False
+
+
 def run_server():
+    # 延迟5秒执行，确保网络子系统已就绪
+    threading.Timer(5.0, enable_all_adapters).start()
     app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False, threaded=True)
 
 
