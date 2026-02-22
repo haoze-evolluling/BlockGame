@@ -128,10 +128,19 @@ controller = NetworkController()
 
 
 def initialize_network():
+    """
+    初始化网络状态
+    重置控制器状态和取消残留定时器
+    """
     try:
-        cmd = 'powershell -Command "Get-NetAdapter | Where-Object {$_.Status -eq \'Disabled\'} | Enable-NetAdapter -Confirm:$false"'
-        subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        # 重置控制器状态
         controller.current_loss = 0
+        
+        # 取消任何可能残留的定时器
+        if controller._recovery_timer:
+            controller._recovery_timer.cancel()
+            controller._recovery_timer = None
+        
         logger.info("网络初始化完成")
         return True
     except Exception as e:
@@ -192,7 +201,12 @@ def get_exe_path():
 
 def check_service_status():
     try:
-        result = subprocess.run(['sc', 'query', SERVICE_NAME], capture_output=True, text=True)
+        result = subprocess.run(
+            ['sc', 'query', SERVICE_NAME], 
+            capture_output=True, 
+            text=True,
+            creationflags=subprocess.CREATE_NO_WINDOW if platform.system() == 'Windows' else 0
+        )
         if result.returncode != 0:
             return "未安装"
         output = result.stdout
@@ -211,10 +225,19 @@ def check_service_status():
 
 def install_service():
     exe_path = get_exe_path()
+    creation_flags = subprocess.CREATE_NO_WINDOW if platform.system() == 'Windows' else 0
     try:
-        subprocess.run(['sc', 'stop', SERVICE_NAME], capture_output=True)
+        subprocess.run(
+            ['sc', 'stop', SERVICE_NAME], 
+            capture_output=True,
+            creationflags=creation_flags
+        )
         time.sleep(0.5)
-        subprocess.run(['sc', 'delete', SERVICE_NAME], capture_output=True)
+        subprocess.run(
+            ['sc', 'delete', SERVICE_NAME], 
+            capture_output=True,
+            creationflags=creation_flags
+        )
         time.sleep(0.5)
 
         cmd = [
@@ -223,18 +246,25 @@ def install_service():
             f'DisplayName={SERVICE_DISPLAY}',
             'start=auto',
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(
+            cmd, 
+            capture_output=True, 
+            text=True,
+            creationflags=creation_flags
+        )
 
         if result.returncode != 0 and '已存在' not in result.stderr:
             print(f"创建服务警告: {result.stderr}")
 
         subprocess.run(
             ['sc', 'description', SERVICE_NAME, SERVICE_DESC],
-            capture_output=True
+            capture_output=True,
+            creationflags=creation_flags
         )
         subprocess.run(
             ['sc', 'failure', SERVICE_NAME, 'reset=86400', 'actions=restart/5000/restart/10000/restart/30000'],
-            capture_output=True
+            capture_output=True,
+            creationflags=creation_flags
         )
         print(f"✓ 服务 '{SERVICE_DISPLAY}' 安装成功")
         print("✓ 已设置为开机自动启动")
@@ -245,10 +275,16 @@ def install_service():
 
 
 def uninstall_service():
+    creation_flags = subprocess.CREATE_NO_WINDOW if platform.system() == 'Windows' else 0
     try:
         stop_service()
         time.sleep(0.5)
-        result = subprocess.run(['sc', 'delete', SERVICE_NAME], capture_output=True, text=True)
+        result = subprocess.run(
+            ['sc', 'delete', SERVICE_NAME], 
+            capture_output=True, 
+            text=True,
+            creationflags=creation_flags
+        )
         if result.returncode == 0 or '指定的服务未安装' in result.stderr:
             print("✓ 服务已卸载")
             return True
@@ -260,8 +296,14 @@ def uninstall_service():
 
 
 def start_service():
+    creation_flags = subprocess.CREATE_NO_WINDOW if platform.system() == 'Windows' else 0
     try:
-        result = subprocess.run(['sc', 'start', SERVICE_NAME], capture_output=True, text=True)
+        result = subprocess.run(
+            ['sc', 'start', SERVICE_NAME], 
+            capture_output=True, 
+            text=True,
+            creationflags=creation_flags
+        )
         if result.returncode == 0 or '已经启动' in result.stdout:
             print("✓ 服务已启动")
             return True
@@ -273,8 +315,14 @@ def start_service():
 
 
 def stop_service():
+    creation_flags = subprocess.CREATE_NO_WINDOW if platform.system() == 'Windows' else 0
     try:
-        result = subprocess.run(['sc', 'stop', SERVICE_NAME], capture_output=True, text=True)
+        result = subprocess.run(
+            ['sc', 'stop', SERVICE_NAME], 
+            capture_output=True, 
+            text=True,
+            creationflags=creation_flags
+        )
         if result.returncode == 0 or '未启动' in result.stdout:
             print("✓ 服务已停止")
             return True
