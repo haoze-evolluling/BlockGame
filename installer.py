@@ -139,6 +139,41 @@ class BrowserLauncher:
             pass
 
 
+import socket
+
+
+class NetworkHelper:
+    """网络工具"""
+
+    @staticmethod
+    def get_local_ips() -> List[str]:
+        """获取本机所有局域网 IP 地址"""
+        ips = []
+        try:
+            hostname = socket.gethostname()
+            addr_info = socket.getaddrinfo(hostname, None)
+            for info in addr_info:
+                ip = info[4][0]
+                if ip.startswith("192.168.") or ip.startswith("10.") or ip.startswith("172."):
+                    if ip not in ips:
+                        ips.append(ip)
+        except Exception:
+            pass
+
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.settimeout(0.5)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            if ip not in ips and not ip.startswith("127."):
+                ips.insert(0, ip)
+            s.close()
+        except Exception:
+            pass
+
+        return ips if ips else ["127.0.0.1"]
+
+
 class InstallerUI:
     """安装界面"""
 
@@ -159,8 +194,18 @@ class InstallerUI:
         print()
 
     def show_usage(self) -> None:
+        ips = NetworkHelper.get_local_ips()
         print("使用说明:")
-        print(f"- 访问 http://<本机IP>:{self.config.port} 打开控制界面")
+        print()
+        print("本机访问:")
+        print(f"  http://127.0.0.1:{self.config.port}")
+        print(f"  http://localhost:{self.config.port}")
+        print()
+        print("局域网访问:")
+        for ip in ips:
+            print(f"  http://{ip}:{self.config.port}")
+        print()
+        print("其他信息:")
         print("- 服务已设置为开机自动启动")
         print(f"- 安装目录: {self.config.install_dir}")
         print()
