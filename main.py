@@ -169,24 +169,14 @@ def initialize_network():
 
 
 def get_frontend_dir():
-    """获取前端目录路径"""
+    """获取前端目录路径（HTML文件现在位于根目录）"""
     if getattr(sys, 'frozen', False):
-        # 打包后的环境 - 优先检查exe所在目录
+        # 打包后的环境 - 返回exe所在目录
         exe_dir = os.path.dirname(sys.executable)
-        frontend_dir = os.path.join(exe_dir, 'frontend')
-        if os.path.exists(frontend_dir):
-            return frontend_dir
-        
-        # 尝试_MEIPASS路径（PyInstaller解压路径）
-        meipass_path = getattr(sys, '_MEIPASS', None)
-        if meipass_path:
-            frontend_dir = os.path.join(meipass_path, 'frontend')
-            if os.path.exists(frontend_dir):
-                return frontend_dir
+        return exe_dir
     
-    # 开发环境
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(current_dir, 'frontend')
+    # 开发环境 - 返回当前脚本所在目录
+    return os.path.dirname(os.path.abspath(__file__))
 
 
 @app.route('/')
