@@ -219,9 +219,9 @@ def install_service():
 
         cmd = [
             'sc', 'create', SERVICE_NAME,
-            'binPath=', f'"{exe_path}" service',
-            'DisplayName=', SERVICE_DISPLAY,
-            'start=', 'auto',
+            f'binPath="{exe_path}" service',
+            f'DisplayName={SERVICE_DISPLAY}',
+            'start=auto',
         ]
         result = subprocess.run(cmd, capture_output=True, text=True)
 
@@ -233,7 +233,7 @@ def install_service():
             capture_output=True
         )
         subprocess.run(
-            ['sc', 'failure', SERVICE_NAME, 'reset=', '86400', 'actions=', 'restart/5000/restart/10000/restart/30000'],
+            ['sc', 'failure', SERVICE_NAME, 'reset=86400', 'actions=restart/5000/restart/10000/restart/30000'],
             capture_output=True
         )
         print(f"✓ 服务 '{SERVICE_DISPLAY}' 安装成功")
