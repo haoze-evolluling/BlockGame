@@ -3,7 +3,7 @@
 block_cipher = None
 
 a = Analysis(
-    ['setup.py'],
+    ['main.py'],
     pathex=[],
     binaries=[],
     datas=[
@@ -19,8 +19,6 @@ a = Analysis(
         'click',
         'itsdangerous',
         'markupsafe',
-        'backend.network_control',
-        'backend.server',
     ],
     hookspath=[],
     hooksconfig={},

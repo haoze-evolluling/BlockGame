@@ -4,19 +4,42 @@ import os
 import subprocess
 import sys
 
-# 修复打包后的模块导入
-if getattr(sys, 'frozen', False):
-    # 打包后的环境
-    import importlib.util
-    backend_path = os.path.join(sys._MEIPASS, 'backend')
-    sys.path.insert(0, backend_path)
-    
-from backend.network_control import NetworkController
+
+def setup_environment():
+    """设置运行环境"""
+    if getattr(sys, 'frozen', False):
+        # 打包后的环境
+        exe_dir = os.path.dirname(sys.executable)
+        
+        # 设置工作目录为exe所在目录
+        os.chdir(exe_dir)
+        
+        # 添加各种可能的路径到Python路径
+        paths_to_add = [
+            exe_dir,
+            os.path.join(exe_dir, 'backend'),
+            getattr(sys, '_MEIPASS', exe_dir),
+        ]
+        
+        for path in paths_to_add:
+            if path and path not in sys.path:
+                sys.path.insert(0, path)
+
+
+# 初始化环境
+setup_environment()
+
+# 导入网络控制模块
+try:
+    from network_control import NetworkController
+except ImportError:
+    from backend.network_control import NetworkController
 
 app = Flask(__name__)
 CORS(app)
 
 controller = NetworkController()
+
 
 def initialize_network():
     """程序启动时初始化网络，启用所有网络适配器"""
@@ -30,16 +53,42 @@ def initialize_network():
         print(f"网络初始化失败：{e}")
         return False
 
+
 # 程序启动时执行网络初始化
 initialize_network()
 
+
+def get_frontend_dir():
+    """获取前端目录路径"""
+    if getattr(sys, 'frozen', False):
+        # 打包后的环境 - 优先检查exe所在目录
+        exe_dir = os.path.dirname(sys.executable)
+        frontend_dir = os.path.join(exe_dir, 'frontend')
+        if os.path.exists(frontend_dir):
+            return frontend_dir
+        
+        # 尝试_MEIPASS路径（PyInstaller解压路径）
+        meipass_path = getattr(sys, '_MEIPASS', None)
+        if meipass_path:
+            frontend_dir = os.path.join(meipass_path, 'frontend')
+            if os.path.exists(frontend_dir):
+                return frontend_dir
+    
+    # 开发环境
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(os.path.dirname(current_dir), 'frontend')
+
+
 @app.route('/')
 def index():
-    return send_from_directory('../frontend', 'index.html')
+    frontend_dir = get_frontend_dir()
+    return send_from_directory(frontend_dir, 'index.html')
+
 
 @app.route('/api/status', methods=['GET'])
 def get_status():
     return jsonify(controller.get_status())
+
 
 @app.route('/api/set-loss', methods=['POST'])
 def set_loss():
@@ -52,10 +101,12 @@ def set_loss():
     success, message = controller.set_packet_loss(loss)
     return jsonify({'success': success, 'message': message})
 
+
 @app.route('/api/reboot', methods=['POST'])
 def reboot():
     success, message = controller.reboot_system()
     return jsonify({'success': success, 'message': message})
+
 
 if __name__ == '__main__':
     # 0.0.0.0 允许局域网访问
