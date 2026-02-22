@@ -1,6 +1,7 @@
 build/
 .vscode/
 dist/
+发布包/
 
 # Python 缓存
 __pycache__/
