@@ -1,9 +1,8 @@
 """
 网络控制器 - 集成服务管理版本
-支持：独立运行、Windows服务、局域网控制
+支持：Windows服务、局域网控制
 """
 import subprocess
-import platform
 import os
 import sys
 import threading
@@ -11,28 +10,6 @@ import time
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import ctypes
-import logging
-
-
-def setup_logging():
-    log_format = '%(asctime)s - %(levelname)s - %(message)s'
-    if getattr(sys, 'frozen', False):
-        log_dir = os.path.dirname(sys.executable)
-        log_file = os.path.join(log_dir, 'network_controller.log')
-        logging.basicConfig(
-            level=logging.INFO,
-            format=log_format,
-            handlers=[
-                logging.FileHandler(log_file, encoding='utf-8'),
-                logging.StreamHandler(sys.stdout)
-            ]
-        )
-    else:
-        logging.basicConfig(level=logging.INFO, format=log_format)
-    return logging.getLogger(__name__)
-
-
-logger = setup_logging()
 
 SERVICE_NAME = "NetworkController"
 SERVICE_DISPLAY = "网络控制器服务"
@@ -42,15 +19,11 @@ SERVICE_DESC = "提供网络控制和Web管理界面服务"
 class NetworkController:
     def __init__(self):
         self.current_loss = 0
-        self.system = platform.system()
         self._recovery_timer = None
 
     def set_packet_loss(self, loss_percent):
         try:
-            if self.system == "Windows":
-                return self._set_windows_loss(loss_percent)
-            else:
-                return self._set_linux_loss(loss_percent)
+            return self._set_windows_loss(loss_percent)
         except Exception as e:
             return False, str(e)
 
@@ -75,25 +48,6 @@ class NetworkController:
 
         return False, "无效的丢包率"
 
-    def _set_linux_loss(self, loss_percent):
-        interface = self._get_main_interface()
-        if not interface:
-            return False, "无法找到网络接口"
-        subprocess.run(f"tc qdisc del dev {interface} root", shell=True, stderr=subprocess.DEVNULL)
-        if loss_percent > 0:
-            cmd = f"tc qdisc add dev {interface} root netem loss {loss_percent}%"
-            subprocess.run(cmd, shell=True)
-        self.current_loss = loss_percent
-        return True, f"已设置丢包率为 {loss_percent}%"
-
-    def _get_main_interface(self):
-        try:
-            result = subprocess.run("ip route | grep default | awk '{print $5}'",
-                                  shell=True, capture_output=True, text=True)
-            return result.stdout.strip()
-        except:
-            return "eth0"
-
     def get_status(self):
         return {"loss_percent": self.current_loss}
 
@@ -106,49 +60,12 @@ class NetworkController:
         except:
             pass
 
-    def cleanup(self):
-        if self._recovery_timer:
-            self._recovery_timer.cancel()
-
-
-def setup_environment():
-    if getattr(sys, 'frozen', False):
-        exe_dir = os.path.dirname(sys.executable)
-        os.chdir(exe_dir)
-        paths_to_add = [exe_dir, getattr(sys, '_MEIPASS', exe_dir)]
-        for path in paths_to_add:
-            if path and path not in sys.path:
-                sys.path.insert(0, path)
-
-
-setup_environment()
 app = Flask(__name__)
 CORS(app)
 controller = NetworkController()
 
 
-def initialize_network():
-    """
-    初始化网络状态
-    重置控制器状态和取消残留定时器
-    """
-    try:
-        # 重置控制器状态
-        controller.current_loss = 0
-        
-        # 取消任何可能残留的定时器
-        if controller._recovery_timer:
-            controller._recovery_timer.cancel()
-            controller._recovery_timer = None
-        
-        logger.info("网络初始化完成")
-        return True
-    except Exception as e:
-        logger.error(f"网络初始化失败：{e}")
-        return False
-
-
-def get_frontend_dir():
+def get_exe_dir():
     if getattr(sys, 'frozen', False):
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
@@ -156,7 +73,7 @@ def get_frontend_dir():
 
 @app.route('/')
 def index():
-    return send_from_directory(get_frontend_dir(), 'index.html')
+    return send_from_directory(get_exe_dir(), 'index.html')
 
 
 @app.route('/api/status', methods=['GET'])
@@ -202,10 +119,10 @@ def get_exe_path():
 def check_service_status():
     try:
         result = subprocess.run(
-            ['sc', 'query', SERVICE_NAME], 
-            capture_output=True, 
+            ['sc', 'query', SERVICE_NAME],
+            capture_output=True,
             text=True,
-            creationflags=subprocess.CREATE_NO_WINDOW if platform.system() == 'Windows' else 0
+            creationflags=subprocess.CREATE_NO_WINDOW
         )
         if result.returncode != 0:
             return "未安装"
@@ -225,18 +142,17 @@ def check_service_status():
 
 def install_service():
     exe_path = get_exe_path()
-    creation_flags = subprocess.CREATE_NO_WINDOW if platform.system() == 'Windows' else 0
     try:
         subprocess.run(
-            ['sc', 'stop', SERVICE_NAME], 
+            ['sc', 'stop', SERVICE_NAME],
             capture_output=True,
-            creationflags=creation_flags
+            creationflags=subprocess.CREATE_NO_WINDOW
         )
         time.sleep(0.5)
         subprocess.run(
-            ['sc', 'delete', SERVICE_NAME], 
+            ['sc', 'delete', SERVICE_NAME],
             capture_output=True,
-            creationflags=creation_flags
+            creationflags=subprocess.CREATE_NO_WINDOW
         )
         time.sleep(0.5)
 
@@ -247,10 +163,10 @@ def install_service():
             'start=auto',
         ]
         result = subprocess.run(
-            cmd, 
-            capture_output=True, 
+            cmd,
+            capture_output=True,
             text=True,
-            creationflags=creation_flags
+            creationflags=subprocess.CREATE_NO_WINDOW
         )
 
         if result.returncode != 0 and '已存在' not in result.stderr:
@@ -259,12 +175,12 @@ def install_service():
         subprocess.run(
             ['sc', 'description', SERVICE_NAME, SERVICE_DESC],
             capture_output=True,
-            creationflags=creation_flags
+            creationflags=subprocess.CREATE_NO_WINDOW
         )
         subprocess.run(
             ['sc', 'failure', SERVICE_NAME, 'reset=86400', 'actions=restart/5000/restart/10000/restart/30000'],
             capture_output=True,
-            creationflags=creation_flags
+            creationflags=subprocess.CREATE_NO_WINDOW
         )
         print(f"✓ 服务 '{SERVICE_DISPLAY}' 安装成功")
         print("✓ 已设置为开机自动启动")
@@ -275,15 +191,14 @@ def install_service():
 
 
 def uninstall_service():
-    creation_flags = subprocess.CREATE_NO_WINDOW if platform.system() == 'Windows' else 0
     try:
         stop_service()
         time.sleep(0.5)
         result = subprocess.run(
-            ['sc', 'delete', SERVICE_NAME], 
-            capture_output=True, 
+            ['sc', 'delete', SERVICE_NAME],
+            capture_output=True,
             text=True,
-            creationflags=creation_flags
+            creationflags=subprocess.CREATE_NO_WINDOW
         )
         if result.returncode == 0 or '指定的服务未安装' in result.stderr:
             print("✓ 服务已卸载")
@@ -296,13 +211,12 @@ def uninstall_service():
 
 
 def start_service():
-    creation_flags = subprocess.CREATE_NO_WINDOW if platform.system() == 'Windows' else 0
     try:
         result = subprocess.run(
-            ['sc', 'start', SERVICE_NAME], 
-            capture_output=True, 
+            ['sc', 'start', SERVICE_NAME],
+            capture_output=True,
             text=True,
-            creationflags=creation_flags
+            creationflags=subprocess.CREATE_NO_WINDOW
         )
         if result.returncode == 0 or '已经启动' in result.stdout:
             print("✓ 服务已启动")
@@ -315,13 +229,12 @@ def start_service():
 
 
 def stop_service():
-    creation_flags = subprocess.CREATE_NO_WINDOW if platform.system() == 'Windows' else 0
     try:
         result = subprocess.run(
-            ['sc', 'stop', SERVICE_NAME], 
-            capture_output=True, 
+            ['sc', 'stop', SERVICE_NAME],
+            capture_output=True,
             text=True,
-            creationflags=creation_flags
+            creationflags=subprocess.CREATE_NO_WINDOW
         )
         if result.returncode == 0 or '未启动' in result.stdout:
             print("✓ 服务已停止")
@@ -345,7 +258,6 @@ def show_help():
     print("用法: NetworkController.exe [命令]")
     print()
     print("命令:")
-    print("  (无)        以独立模式运行Web服务器")
     print("  install     安装为Windows服务")
     print("  uninstall   卸载服务")
     print("  start       启动服务")
@@ -359,28 +271,13 @@ def show_help():
 
 
 def run_server():
-    initialize_network()
-    logger.info("=" * 50)
-    logger.info("网络控制器启动")
-    logger.info("访问地址: http://0.0.0.0:5000")
-    logger.info("=" * 50)
-    try:
-        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False, threaded=True)
-    except KeyboardInterrupt:
-        logger.info("服务已停止")
-    except Exception as e:
-        logger.error(f"服务器错误: {e}")
-    finally:
-        controller.cleanup()
+    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False, threaded=True)
 
 
 def main():
     if len(sys.argv) < 2:
-        if not is_admin():
-            print("需要管理员权限运行网络控制功能...")
-            request_admin()
-            return
-        run_server()
+        print("请使用命令参数运行")
+        show_help()
         return
 
     command = sys.argv[1].lower()
