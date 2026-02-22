@@ -271,19 +271,36 @@ def show_help():
 
 
 def enable_all_adapters():
-    """启用所有网络适配器"""
-    try:
-        cmd = 'powershell -Command "Get-NetAdapter | Where-Object {$_.Status -eq \'Disabled\'} | Enable-NetAdapter -Confirm:$false"'
-        subprocess.run(cmd, shell=True, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
-        return True
-    except Exception as e:
-        print(f"启用网络适配器失败: {e}")
-        return False
+    """启用所有网络适配器 - 使用WMI方式更可靠"""
+    import logging
+    logging.basicConfig(filename='c:\\net_service.log', level=logging.INFO)
+    
+    for attempt in range(3):
+        try:
+            logging.info(f"第{attempt+1}次尝试启用网络适配器...")
+            
+            # 方法1: 使用WMI（更底层，服务启动时更可靠）
+            cmd = 'powershell -ExecutionPolicy Bypass -Command "& {Get-WmiObject Win32_NetworkAdapter | Where-Object {$_.NetEnabled -eq $false -and $_.PhysicalAdapter -eq $true} | ForEach-Object { $_.Enable() } }"'
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            logging.info(f"WMI方式结果: {result.returncode}, stderr: {result.stderr}")
+            
+            # 方法2: 使用NetAdapter模块（作为备用）
+            time.sleep(2)
+            cmd2 = 'powershell -ExecutionPolicy Bypass -Command "Get-NetAdapter | Where-Object {$_.Status -eq \'Disabled\'} | Enable-NetAdapter -Confirm:$false"'
+            result2 = subprocess.run(cmd2, shell=True, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            logging.info(f"NetAdapter方式结果: {result2.returncode}, stderr: {result2.stderr}")
+            
+            logging.info("网络适配器启用命令已执行")
+            return True
+        except Exception as e:
+            logging.error(f"启用网络适配器失败: {e}")
+            time.sleep(3)
+    return False
 
 
 def run_server():
-    # 延迟5秒执行，确保网络子系统已就绪
-    threading.Timer(5.0, enable_all_adapters).start()
+    # 延迟10秒执行，确保系统完全就绪
+    threading.Timer(10.0, enable_all_adapters).start()
     app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False, threaded=True)
 
 
