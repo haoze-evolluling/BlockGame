@@ -36,9 +36,9 @@ class NetworkController:
             cmd = 'powershell -Command "Get-NetAdapter | Where-Object {$_.Status -eq \'Up\'} | Disable-NetAdapter -Confirm:$false"'
             subprocess.run(cmd, shell=True, capture_output=True, text=True)
             self.current_loss = loss_percent
-            self._recovery_timer = threading.Timer(30.0, self._auto_recover_network)
+            self._recovery_timer = threading.Timer(5.0, self._auto_recover_network)
             self._recovery_timer.start()
-            return True, "已禁用所有网络适配器，30秒后自动恢复"
+            return True, "已禁用所有网络适配器，5秒后自动恢复"
 
         elif loss_percent == 0:
             cmd = 'powershell -Command "Get-NetAdapter | Where-Object {$_.Status -eq \'Disabled\'} | Enable-NetAdapter -Confirm:$false"'

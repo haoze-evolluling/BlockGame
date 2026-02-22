@@ -190,7 +190,7 @@
             
             <div class="countdown" id="countdown">
                 <div class="countdown-label">恢复网络倒计时</div>
-                <div class="countdown-value" id="countdownValue">30</div>
+                <div class="countdown-value" id="countdownValue">5</div>
                 <div class="progress-bar" id="progressBar">
                     <div class="progress-fill" id="progressFill" style="width: 100%"></div>
                 </div>
@@ -204,7 +204,7 @@
             </button>
             <button class="btn btn-block" id="btnBlock" onclick="setLoss(100)">
                 <span>临时断网</span>
-                <span style="opacity: 0.5">(30秒)</span>
+                <span style="opacity: 0.5">(5秒)</span>
             </button>
             <button class="btn btn-reboot" id="btnReboot" onclick="rebootSystem()">
                 <span>重启系统</span>
@@ -216,7 +216,7 @@
     
     <script>
         const API_URL = window.location.origin;
-        const BLOCK_DURATION = 30;
+        const BLOCK_DURATION = 5;
         let countdownInterval = null;
         let remainingSeconds = 0;
         
@@ -245,7 +245,7 @@
             } catch (error) {
                 // 断网时请求会失败，但倒计时已经在本地启动
                 if (loss === 100) {
-                    showMessage('断网已启动，30秒后自动恢复', 'success');
+                    showMessage('断网已启动，5秒后自动恢复', 'success');
                 } else {
                     showMessage('连接失败：' + error.message, 'error');
                 }
