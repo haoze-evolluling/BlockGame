@@ -1,0 +1,9 @@
+build/
+.vscode/
+dist/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
