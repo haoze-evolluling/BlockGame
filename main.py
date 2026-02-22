@@ -91,6 +91,15 @@ def set_loss():
     return jsonify({'success': success, 'message': message})
 
 
+@app.route('/api/shutdown', methods=['POST'])
+def shutdown_system():
+    try:
+        subprocess.run(['shutdown', '/s', '/t', '0'], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+        return jsonify({'success': True, 'message': '系统正在关机'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'关机失败: {str(e)}'}), 500
+
+
 # ============================================================================
 # 服务管理功能
 # ============================================================================

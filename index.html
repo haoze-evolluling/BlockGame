@@ -209,6 +209,9 @@
             <button class="btn btn-reboot" id="btnReboot" onclick="rebootSystem()">
                 <span>重启系统</span>
             </button>
+            <button class="btn btn-shutdown" id="btnShutdown" onclick="shutdownSystem()">
+                <span>关闭系统</span>
+            </button>
         </div>
         
         <div class="message" id="message"></div>
@@ -276,6 +279,26 @@
             }
         }
         
+        async function shutdownSystem() {
+            if (!confirm('确定要立即关闭系统吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/api/shutdown`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                showMessage(data.message, data.success ? 'success' : 'error');
+            } catch (error) {
+                showMessage('关机失败：' + error.message, 'error');
+            }
+        }
+        
         function startCountdown() {
             stopCountdown();
 
@@ -285,12 +308,14 @@
             const btnBlock = document.getElementById('btnBlock');
             const btnNormal = document.getElementById('btnNormal');
             const btnReboot = document.getElementById('btnReboot');
+            const btnShutdown = document.getElementById('btnShutdown');
 
             countdownEl.classList.add('active');
             progressBar.classList.add('active');
             btnBlock.disabled = true;
             btnNormal.disabled = true;
             btnReboot.disabled = true;
+            btnShutdown.disabled = true;
 
             updateCountdownUI();
 
@@ -316,6 +341,7 @@
             document.getElementById('btnBlock').disabled = false;
             document.getElementById('btnNormal').disabled = false;
             document.getElementById('btnReboot').disabled = false;
+            document.getElementById('btnShutdown').disabled = false;
             remainingSeconds = 0;
         }
         
