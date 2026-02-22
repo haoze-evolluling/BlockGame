@@ -1,0 +1,22 @@
+网络控制器 - 安装说明
+========================
+
+首次安装（需要管理员权限）：
+1. 右键点击"安装程序.exe"
+2. 选择"以管理员身份运行"
+3. 按提示完成安装
+
+安装完成后：
+- 服务会自动注册并启动
+- 开机时会自动运行，无需再次授权
+- 访问 http://localhost:5000 使用
+
+服务管理：
+- ServiceManager.exe install  - 安装服务
+- ServiceManager.exe remove   - 卸载服务
+- ServiceManager.exe start    - 启动服务
+- ServiceManager.exe stop     - 停止服务
+- ServiceManager.exe status   - 查看状态
+
+卸载：
+以管理员身份运行: ServiceManager.exe remove

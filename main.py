@@ -1,6 +1,6 @@
 """
-网络控制器 - 整合版本
-包含所有功能：网络控制、Web服务器、安装程序
+网络控制器 - 服务版本
+包含所有功能：网络控制、Web服务器、Windows服务支持
 """
 import subprocess
 import platform
@@ -14,10 +14,19 @@ import shutil
 import winreg
 import ctypes
 from pathlib import Path
+import logging
+
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
-# 网络控制模块 (原 backend/network_control.py)
+# 网络控制模块
 # ============================================================================
 
 class NetworkController:
@@ -122,7 +131,7 @@ class NetworkController:
 
 
 # ============================================================================
-# Web服务器模块 (原 backend/server.py)
+# Web服务器模块
 # ============================================================================
 
 def setup_environment():
@@ -130,23 +139,16 @@ def setup_environment():
     if getattr(sys, 'frozen', False):
         # 打包后的环境
         exe_dir = os.path.dirname(sys.executable)
-        
-        # 设置工作目录为exe所在目录
         os.chdir(exe_dir)
-        
-        # 添加各种可能的路径到Python路径
         paths_to_add = [
             exe_dir,
-            os.path.join(exe_dir, 'backend'),
             getattr(sys, '_MEIPASS', exe_dir),
         ]
-        
         for path in paths_to_add:
             if path and path not in sys.path:
                 sys.path.insert(0, path)
 
 
-# 初始化环境
 setup_environment()
 
 app = Flask(__name__)
@@ -161,21 +163,18 @@ def initialize_network():
         cmd = 'powershell -Command "Get-NetAdapter | Where-Object {$_.Status -eq \'Disabled\'} | Enable-NetAdapter -Confirm:$false"'
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         controller.current_loss = 0
-        print("网络初始化完成：已启用所有网络适配器")
+        logger.info("网络初始化完成：已启用所有网络适配器")
         return True
     except Exception as e:
-        print(f"网络初始化失败：{e}")
+        logger.error(f"网络初始化失败：{e}")
         return False
 
 
 def get_frontend_dir():
-    """获取前端目录路径（HTML文件现在位于根目录）"""
+    """获取前端目录路径"""
     if getattr(sys, 'frozen', False):
-        # 打包后的环境 - 返回exe所在目录
         exe_dir = os.path.dirname(sys.executable)
         return exe_dir
-    
-    # 开发环境 - 返回当前脚本所在目录
     return os.path.dirname(os.path.abspath(__file__))
 
 
@@ -209,61 +208,42 @@ def reboot():
 
 
 # ============================================================================
-# 安装和启动模块 (整合自 install.py, installer.py, setup.py)
+# 服务运行支持
 # ============================================================================
 
-def is_admin():
-    """检查是否有管理员权限"""
-    try:
-        return ctypes.windll.shell32.IsUserAnAdmin()
-    except:
-        return False
-
-
-def request_admin():
-    """请求管理员权限"""
-    if not is_admin():
-        print("需要管理员权限，正在请求...")
-        ctypes.windll.shell32.ShellExecuteW(
-            None, "runas", sys.executable, f'"{os.path.abspath(__file__)}"', None, 1
-        )
-        sys.exit(0)
-
-
-def add_to_startup():
-    """添加到开机自启动"""
-    try:
-        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
-        
-        script_path = os.path.abspath(sys.argv[0])
-        startup_command = f'"{sys.executable}" "{script_path}"'
-        
-        winreg.SetValueEx(key, "NetworkController", 0, winreg.REG_SZ, startup_command)
-        winreg.CloseKey(key)
-        
-        print("✓ 已设置开机自启动")
-        return True
-    except Exception as e:
-        print(f"✗ 设置开机自启动失败：{e}")
-        return False
-
-
-def install_dependencies():
-    """安装Python依赖"""
-    requirements_file = os.path.join(os.path.dirname(__file__), 'requirements.txt')
-    if os.path.exists(requirements_file):
-        print("📦 安装Python依赖...")
-        subprocess.run([sys.executable, '-m', 'pip', 'install', '-r', requirements_file])
-
-
-def run_server():
-    """运行服务器"""
+def run_server_as_service():
+    """作为Windows服务运行服务器"""
     try:
         # 初始化网络
         initialize_network()
         
-        # 启动Flask服务器
+        logger.info("=" * 50)
+        logger.info("网络控制器服务启动中...")
+        logger.info("访问地址: http://localhost:5000")
+        logger.info("=" * 50)
+        
+        # 使用waitress或其他WSGI服务器（更适合生产环境）
+        # 这里继续使用Flask内置服务器，但禁用重载
+        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False, threaded=True)
+    except Exception as e:
+        logger.error(f"服务器启动失败: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        controller.cleanup()
+
+
+def run_server_standalone():
+    """作为独立程序运行服务器"""
+    try:
+        # 检查管理员权限
+        if not is_admin():
+            request_admin()
+            return
+            
+        # 初始化网络
+        initialize_network()
+        
         print("=" * 50)
         print("网络控制器服务启动中...")
         print("访问地址: http://localhost:5000")
@@ -281,47 +261,48 @@ def run_server():
 
 
 # ============================================================================
+# 工具函数
+# ============================================================================
+
+def is_admin():
+    """检查是否有管理员权限"""
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
+
+
+def request_admin():
+    """请求管理员权限"""
+    if not is_admin():
+        ctypes.windll.shell32.ShellExecuteW(
+            None, "runas", sys.executable, f'"{" ".join(sys.argv)}"', None, 1
+        )
+        sys.exit(0)
+
+
+# ============================================================================
 # 主程序入口
 # ============================================================================
 
 def main():
     """主程序入口"""
+    # 检查是否作为服务运行
+    if os.environ.get('RUNNING_AS_SERVICE') == '1':
+        run_server_as_service()
+        return
+    
     # 检查命令行参数
     if len(sys.argv) > 1:
         command = sys.argv[1].lower()
         
-        if command == 'install':
-            # 安装模式
-            request_admin()
-            install_dependencies()
-            add_to_startup()
-            print("\n✨ 安装完成！")
-            print("\n使用说明：")
-            print("1. 运行服务：python main.py")
-            print("2. 浏览器访问：http://localhost:5000")
-            print("3. 局域网访问：http://<本机IP>:5000")
-            print("\n⚠️ 注意：修改网络设置需要管理员权限")
-            return
-        
-        elif command == 'uninstall':
-            # 卸载模式
-            try:
-                key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
-                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
-                try:
-                    winreg.DeleteValue(key, "NetworkController")
-                    print("✓ 已移除开机自启动")
-                except FileNotFoundError:
-                    print("未找到开机自启动项")
-                winreg.CloseKey(key)
-            except Exception as e:
-                print(f"✗ 移除失败：{e}")
+        if command == 'service':
+            # 服务模式运行
+            run_server_as_service()
             return
     
-    # 默认运行模式
-    request_admin()
-    add_to_startup()
-    run_server()
+    # 默认独立运行模式
+    run_server_standalone()
 
 
 if __name__ == '__main__':
