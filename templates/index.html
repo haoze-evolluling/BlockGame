@@ -74,8 +74,8 @@
         }
 
         .status-value.active-0 { color: #22c55e; }
-        .status-value.active-100 { color: #f59e0b; }
-        .status-value.active-500 { color: #ef4444; }
+        .status-value.active-50 { color: #f59e0b; }
+        .status-value.active-100 { color: #ef4444; }
 
         .controls {
             display: flex;
@@ -228,6 +228,21 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        .warning {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #92400e;
+            display: none;
+        }
+
+        .warning.show {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -238,26 +253,30 @@
     <div class="container">
         <div class="header">
             <h1>网络控制面板</h1>
-            <p>调节网络延迟</p>
+            <p>调节网络丢包率</p>
+        </div>
+
+        <div class="warning" id="warning">
+            警告: scapy 库未安装，丢包控制功能不可用。请运行: pip install scapy
         </div>
 
         <div class="status-card">
-            <div class="status-label">当前延迟</div>
-            <div class="status-value" id="statusValue">0ms</div>
+            <div class="status-label">当前丢包率</div>
+            <div class="status-value" id="statusValue">0%</div>
         </div>
 
         <div class="controls">
-            <button class="btn btn-normal" data-value="0" onclick="setDelay(0)">
+            <button class="btn btn-normal" data-value="0" onclick="setDropRate(0)">
                 <span class="indicator normal"></span>
-                <span>正常网络 (0ms 延迟)</span>
+                <span>正常网络 (0% 丢包)</span>
             </button>
-            <button class="btn btn-medium" data-value="100" onclick="setDelay(100)">
+            <button class="btn btn-medium" data-value="0.5" onclick="setDropRate(0.5)">
                 <span class="indicator medium"></span>
-                <span>轻度延迟 (100ms)</span>
+                <span>中度丢包 (50%)</span>
             </button>
-            <button class="btn btn-block" data-value="500" onclick="setDelay(500)">
+            <button class="btn btn-block" data-value="1.0" onclick="setDropRate(1.0)">
                 <span class="indicator block"></span>
-                <span>重度延迟 (500ms)</span>
+                <span>完全丢包 (100%)</span>
             </button>
         </div>
 
@@ -268,6 +287,7 @@
 
     <script>
         let currentStatus = 0;
+        let scapyAvailable = false;
 
         // 获取本机IP地址
         function getLocalIP() {
@@ -283,32 +303,38 @@
         }
 
         // 更新UI状态
-        function updateUI(delay) {
-            currentStatus = delay;
+        function updateUI(dropRate) {
+            currentStatus = dropRate;
+            const percentage = Math.round(dropRate * 100);
             const statusValue = document.getElementById('statusValue');
-            statusValue.textContent = delay + 'ms';
-            statusValue.className = 'status-value active-' + delay;
+            statusValue.textContent = percentage + '%';
+            statusValue.className = 'status-value active-' + percentage;
 
             document.querySelectorAll('.btn').forEach(btn => {
                 btn.classList.remove('active');
-                if (parseInt(btn.dataset.value) === delay) {
+                if (parseFloat(btn.dataset.value) === dropRate) {
                     btn.classList.add('active');
                 }
             });
         }
 
-        // 设置延迟
-        async function setDelay(delay) {
+        // 设置丢包率
+        async function setDropRate(dropRate) {
+            if (!scapyAvailable) {
+                alert('scapy 库未安装，无法使用丢包控制功能');
+                return;
+            }
+
             showLoading(true);
             try {
                 const response = await fetch('/api/set', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ delay: delay })
+                    body: JSON.stringify({ drop_rate: dropRate })
                 });
                 const data = await response.json();
                 if (data.success) {
-                    updateUI(data.delay);
+                    updateUI(data.drop_rate);
                 }
             } catch (error) {
                 console.error('设置失败:', error);
@@ -321,7 +347,13 @@
             try {
                 const response = await fetch('/api/status');
                 const data = await response.json();
-                updateUI(data.delay);
+                scapyAvailable = data.scapy_available;
+                
+                if (!scapyAvailable) {
+                    document.getElementById('warning').classList.add('show');
+                }
+                
+                updateUI(data.drop_rate);
             } catch (error) {
                 console.error('获取状态失败:', error);
             }
