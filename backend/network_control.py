@@ -3,6 +3,8 @@ import platform
 import os
 import sys
 import psutil
+import threading
+import time
 
 class NetworkController:
     def __init__(self):
@@ -10,6 +12,7 @@ class NetworkController:
         self.system = platform.system()
         self.clumsy_process = None
         self.clumsy_path = self._get_clumsy_path()
+        self._recovery_timer = None
     
     def _get_clumsy_path(self):
         """获取clumsy.exe路径"""
@@ -62,13 +65,23 @@ class NetworkController:
         """Windows系统使用clumsy或直接禁用网络适配器"""
         # 先停止之前的clumsy进程
         self._kill_clumsy()
-        
+
+        # 取消之前的恢复定时器
+        if self._recovery_timer:
+            self._recovery_timer.cancel()
+            self._recovery_timer = None
+
         if loss_percent == 100:
-            # 禁用所有网络适配器
+            # 禁用所有网络适配器，30秒后自动恢复
             cmd = 'powershell -Command "Get-NetAdapter | Where-Object {$_.Status -eq \'Up\'} | Disable-NetAdapter -Confirm:$false"'
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
             self.current_loss = loss_percent
-            return True, f"已设置丢包率为 {loss_percent}%"
+
+            # 启动定时器，30秒后自动恢复
+            self._recovery_timer = threading.Timer(30.0, self._auto_recover_network)
+            self._recovery_timer.start()
+
+            return True, f"已禁用所有网络适配器，30秒后自动恢复"
             
         elif loss_percent == 0:
             # 启用所有网络适配器
@@ -151,6 +164,18 @@ class NetworkController:
         """获取当前状态"""
         return {"loss_percent": self.current_loss}
     
+    def _auto_recover_network(self):
+        """自动恢复网络适配器"""
+        try:
+            cmd = 'powershell -Command "Get-NetAdapter | Where-Object {$_.Status -eq \'Disabled\'} | Enable-NetAdapter -Confirm:$false"'
+            subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            self.current_loss = 0
+            self._recovery_timer = None
+        except:
+            pass
+
     def cleanup(self):
         """清理资源"""
+        if self._recovery_timer:
+            self._recovery_timer.cancel()
         self._kill_clumsy()
