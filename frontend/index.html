@@ -12,8 +12,8 @@
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0a0a0a;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -22,109 +22,206 @@
         }
         
         .container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 500px;
+            background: #141414;
+            border-radius: 24px;
+            padding: 48px;
+            box-shadow: 0 8px 48px rgba(0, 0, 0, 0.6);
+            max-width: 420px;
             width: 100%;
+            border: 1px solid #222;
         }
         
         h1 {
             text-align: center;
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 28px;
+            color: #fff;
+            margin-bottom: 40px;
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
         
-        .status {
+        .status-card {
+            background: #1a1a1a;
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 32px;
             text-align: center;
-            padding: 20px;
-            background: #f0f0f0;
-            border-radius: 10px;
-            margin-bottom: 30px;
+            border: 1px solid #2a2a2a;
         }
         
         .status-label {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 10px;
+            color: #888;
+            font-size: 13px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .status-value {
-            font-size: 36px;
-            font-weight: bold;
-            color: #667eea;
+            font-size: 42px;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1;
+        }
+        
+        .countdown {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #2a2a2a;
+            display: none;
+        }
+        
+        .countdown.active {
+            display: block;
+        }
+        
+        .countdown-label {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .countdown-value {
+            font-size: 32px;
+            font-weight: 600;
+            color: #fff;
+            font-variant-numeric: tabular-nums;
         }
         
         .controls {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             flex-direction: column;
         }
         
         .btn {
-            padding: 18px;
+            padding: 16px 24px;
             border: none;
-            border-radius: 10px;
-            font-size: 18px;
-            font-weight: bold;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s;
-            color: white;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transform: translateY(-1px);
         }
         
         .btn:active {
             transform: translateY(0);
         }
         
-        .btn-normal {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none;
         }
-
+        
+        .btn-normal {
+            background: #fff;
+            color: #0a0a0a;
+        }
+        
+        .btn-normal:hover:not(:disabled) {
+            background: #e0e0e0;
+            box-shadow: 0 4px 16px rgba(255, 255, 255, 0.1);
+        }
+        
         .btn-block {
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            background: transparent;
+            color: #fff;
+            border: 1.5px solid #3a3a3a;
+        }
+        
+        .btn-block:hover:not(:disabled) {
+            border-color: #fff;
+            background: rgba(255, 255, 255, 0.05);
         }
         
         .message {
             margin-top: 20px;
-            padding: 15px;
+            padding: 14px 18px;
             border-radius: 10px;
             text-align: center;
+            font-size: 14px;
             display: none;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
         .message.success {
-            background: #d4edda;
-            color: #155724;
+            background: #1a1a1a;
+            color: #fff;
+            border: 1px solid #333;
         }
         
         .message.error {
-            background: #f8d7da;
-            color: #721c24;
+            background: #fff;
+            color: #0a0a0a;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 3px;
+            background: #2a2a2a;
+            border-radius: 2px;
+            margin-top: 12px;
+            overflow: hidden;
+            display: none;
+        }
+        
+        .progress-bar.active {
+            display: block;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #fff;
+            border-radius: 2px;
+            transition: width 1s linear;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎮 网络控制器</h1>
+        <h1>网络控制器</h1>
         
-        <div class="status">
-            <div class="status-label">当前丢包率</div>
-            <div class="status-value" id="currentLoss">0%</div>
+        <div class="status-card">
+            <div class="status-label">当前状态</div>
+            <div class="status-value" id="currentStatus">正常</div>
+            
+            <div class="countdown" id="countdown">
+                <div class="countdown-label">恢复网络倒计时</div>
+                <div class="countdown-value" id="countdownValue">30</div>
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill" style="width: 100%"></div>
+                </div>
+            </div>
         </div>
         
         <div class="controls">
-            <button class="btn btn-normal" onclick="setLoss(0)">
-                ✅ 正常模式 (0%)
+            <button class="btn btn-normal" id="btnNormal" onclick="setLoss(0)">
+                <span>正常模式</span>
+                <span style="opacity: 0.5">(0%)</span>
             </button>
-            <button class="btn btn-block" onclick="setLoss(100)">
-                🚫 临时断网 (30秒)
+            <button class="btn btn-block" id="btnBlock" onclick="setLoss(100)">
+                <span>临时断网</span>
+                <span style="opacity: 0.5">(30秒)</span>
             </button>
         </div>
         
@@ -133,6 +230,9 @@
     
     <script>
         const API_URL = window.location.origin;
+        const BLOCK_DURATION = 30;
+        let countdownInterval = null;
+        let remainingSeconds = 0;
         
         async function setLoss(loss) {
             try {
@@ -149,17 +249,73 @@
                 
                 if (data.success) {
                     updateStatus();
+                    
+                    if (loss === 100) {
+                        startCountdown();
+                    } else {
+                        stopCountdown();
+                    }
                 }
             } catch (error) {
                 showMessage('连接失败：' + error.message, 'error');
             }
         }
         
+        function startCountdown() {
+            stopCountdown();
+            
+            remainingSeconds = BLOCK_DURATION;
+            const countdownEl = document.getElementById('countdown');
+            const countdownValueEl = document.getElementById('countdownValue');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            const btnBlock = document.getElementById('btnBlock');
+            
+            countdownEl.classList.add('active');
+            progressBar.classList.add('active');
+            btnBlock.disabled = true;
+            
+            updateCountdownUI();
+            
+            countdownInterval = setInterval(() => {
+                remainingSeconds--;
+                updateCountdownUI();
+                
+                if (remainingSeconds <= 0) {
+                    stopCountdown();
+                    setLoss(0);
+                }
+            }, 1000);
+        }
+        
+        function stopCountdown() {
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            
+            document.getElementById('countdown').classList.remove('active');
+            document.getElementById('progressBar').classList.remove('active');
+            document.getElementById('btnBlock').disabled = false;
+            remainingSeconds = 0;
+        }
+        
+        function updateCountdownUI() {
+            const countdownValueEl = document.getElementById('countdownValue');
+            const progressFill = document.getElementById('progressFill');
+            
+            countdownValueEl.textContent = remainingSeconds;
+            
+            const progressPercent = (remainingSeconds / BLOCK_DURATION) * 100;
+            progressFill.style.width = progressPercent + '%';
+        }
+        
         async function updateStatus() {
             try {
                 const response = await fetch(`${API_URL}/api/status`);
                 const data = await response.json();
-                document.getElementById('currentLoss').textContent = data.loss_percent + '%';
+                const isBlocked = data.loss_percent === 100;
+                document.getElementById('currentStatus').textContent = isBlocked ? '已断开' : '正常';
             } catch (error) {
                 console.error('获取状态失败:', error);
             }
@@ -176,10 +332,7 @@
             }, 3000);
         }
         
-        // 页面加载时获取状态
         updateStatus();
-        
-        // 每5秒更新一次状态
         setInterval(updateStatus, 5000);
     </script>
 </body>

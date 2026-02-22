@@ -2,11 +2,27 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from network_control import NetworkController
 import os
+import subprocess
 
 app = Flask(__name__)
 CORS(app)
 
 controller = NetworkController()
+
+def initialize_network():
+    """程序启动时初始化网络，启用所有网络适配器"""
+    try:
+        cmd = 'powershell -Command "Get-NetAdapter | Where-Object {$_.Status -eq \'Disabled\'} | Enable-NetAdapter -Confirm:$false"'
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        controller.current_loss = 0
+        print("网络初始化完成：已启用所有网络适配器")
+        return True
+    except Exception as e:
+        print(f"网络初始化失败：{e}")
+        return False
+
+# 程序启动时执行网络初始化
+initialize_network()
 
 @app.route('/')
 def index():
