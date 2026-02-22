@@ -8,6 +8,9 @@ a = Analysis(
     binaries=[],
     datas=[
         ('frontend/index.html', 'frontend'),
+        ('clumsy/clumsy.exe', 'clumsy'),           # 打包clumsy.exe
+        ('clumsy/WinDivert.dll', 'clumsy'),        # 打包依赖dll
+        ('clumsy/WinDivert64.sys', 'clumsy'),      # 打包依赖sys
     ],
     hiddenimports=['flask', 'flask_cors', 'psutil'],
     hookspath=[],

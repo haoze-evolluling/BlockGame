@@ -15,6 +15,37 @@ def build_exe():
     """使用PyInstaller打包"""
     print("\n🔨 开始打包...")
     
+    # 检查clumsy文件夹是否存在
+    if not os.path.exists('clumsy'):
+        print("\n❌ 错误: 找不到 clumsy 文件夹")
+        print("请确保 clumsy 文件夹在项目根目录")
+        sys.exit(1)
+    
+    # 检查clumsy.exe是否存在
+    if not os.path.exists('clumsy/clumsy.exe'):
+        print("\n❌ 错误: 找不到 clumsy/clumsy.exe")
+        print("50%丢包功能需要 clumsy.exe")
+        print("请将 clumsy 文件夹放到项目根目录")
+        sys.exit(1)
+    
+    # 检查依赖文件
+    required_files = [
+        'clumsy/WinDivert.dll',
+        'clumsy/WinDivert64.sys'
+    ]
+    
+    missing_files = [f for f in required_files if not os.path.exists(f)]
+    if missing_files:
+        print("\n⚠️ 警告: 缺少依赖文件:")
+        for f in missing_files:
+            print(f"  - {f}")
+        choice = input("\n是否继续打包？(y/N): ").strip().lower()
+        if choice != 'y':
+            print("已取消打包")
+            sys.exit(0)
+    
+    print("✅ clumsy 文件检查通过")
+    
     # 清理旧的构建文件
     if os.path.exists('build'):
         import shutil

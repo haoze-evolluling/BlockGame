@@ -37,4 +37,8 @@ def set_loss():
 
 if __name__ == '__main__':
     # 0.0.0.0 允许局域网访问
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    try:
+        app.run(host='0.0.0.0', port=5000, debug=False)
+    finally:
+        # 程序退出时清理clumsy进程
+        controller.cleanup()
